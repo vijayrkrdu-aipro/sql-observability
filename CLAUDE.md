@@ -406,9 +406,14 @@ with Automatic Page Refresh — no deployment needed.)*
 ## 15. Build plan — phased, offline acceptance criteria + a commit per task
 
 **Phase 1 — scaffold, db layer, volatile collectors** (branch `feat/phase1`)
-- 1.1 Scaffold `src/`, `run.py`, `tests/` around the **provided** root files (`requirements.txt`,
+- [x] 1.1 Scaffold `src/`, `run.py`, `tests/` around the **provided** root files (`requirements.txt`,
   `requirements-dev.txt`, `.gitignore`, `config.yaml`, `.env.example`, `sql/repo_schema.sql`,
   `sql/workload_attribution.sql`). ✅ `python run.py --help` works; `git status` shows no secrets. **Commit.**
+  — DONE (commit `26711c3`): `src/__init__.py`, `src/collectors/__init__.py`, `tests/__init__.py`,
+  `run.py` (argparse CLI shell: `--task`/`--dry-run`/`--config`; task dispatch is a placeholder until
+  1.2-1.4 wire in config/db/collectors), `tests/test_run_cli.py` (help exits 0, missing `--task` exits
+  non-zero). `ruff check .` clean, `pytest -q` green (2 passed). Repo git-initialized on `feat/phase1`;
+  no `.env`/secrets tracked. Remote/push intentionally NOT done (Section 9 — human's job).
 - 1.2 `src/config.py` + `src/db.py` (factory + run-logging, import-isolated). ✅ `ruff` clean; config
   load+validate unit-tested. **Commit.**
 - 1.3 `base.Collector` + `conftest.py` fakes/fixtures. ✅ a sample collector runs `--dry-run` against

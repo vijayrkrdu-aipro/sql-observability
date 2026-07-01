@@ -414,8 +414,15 @@ with Automatic Page Refresh — no deployment needed.)*
   1.2-1.4 wire in config/db/collectors), `tests/test_run_cli.py` (help exits 0, missing `--task` exits
   non-zero). `ruff check .` clean, `pytest -q` green (2 passed). Repo git-initialized on `feat/phase1`;
   no `.env`/secrets tracked. Remote/push intentionally NOT done (Section 9 — human's job).
-- 1.2 `src/config.py` + `src/db.py` (factory + run-logging, import-isolated). ✅ `ruff` clean; config
+- [x] 1.2 `src/config.py` + `src/db.py` (factory + run-logging, import-isolated). ✅ `ruff` clean; config
   load+validate unit-tested. **Commit.**
+  — DONE: `src/config.py` (`load_config`/`validate_config`/`env_var_prefix`), `src/db.py`
+  (`build_connection_string`, `connect` with pyodbc imported lazily inside the function so the
+  module loads with no driver installed, `execute`, `start_run`/`finish_run` for `collection_run`
+  logging). `tests/test_config.py` + `tests/test_db.py` (inline fake cursor/connection; formalized
+  as shared fixtures in Task 1.3). Fixed a real YAML bug in the provided `config.yaml` line 35
+  (`table_access:{` missing a space before `{`, broke PyYAML flow-mapping parse). `ruff check .`
+  clean, `pytest -q` green (26 passed).
 - 1.3 `base.Collector` + `conftest.py` fakes/fixtures. ✅ a sample collector runs `--dry-run` against
   the fake with zero writes. **Commit.**
 - 1.4 `cpu`, `waits`, `query_perf` collectors (Section 11). ✅ transform unit tests pass (CPU math,

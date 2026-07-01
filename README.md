@@ -18,6 +18,7 @@ instance, and expose a stable `rpt.*` view layer that **Power BI** renders as a 
 | `query_perf` | Top queries by CPU / reads / duration | **plan cache** (`dm_exec_query_stats`) | 60 min |
 | `workload` | Login + workload-type attribution (ETL/BI/app/ad-hoc) | **Extended Events** | 30 min |
 | `sessions` | *(optional)* live active-request sampler | DMVs | 5 min |
+| `concurrency` | Near-real-time concurrency timeline (active/blocked/runnable) | DMVs | 1 min |
 | `storage` | Table row counts and size | `dm_db_partition_stats` | daily |
 | `index_ops` | Missing + unused index opportunities | index DMVs | daily |
 | `table_access` | Per-day table access counts + patterns | `dm_db_index_usage_stats` | daily |
@@ -86,9 +87,9 @@ python run.py --task cpu --dry-run
 python run.py --task cpu
 ```
 
-Tasks: `cpu`, `waits`, `query_perf`, `workload`, `sessions` (optional), `storage`, `index_ops`,
-`table_access`, `health`. Exit `0` = success, non-zero = failure (and a `failed` row is written to
-`collection_run`).
+Tasks: `cpu`, `waits`, `query_perf`, `workload`, `sessions` (optional), `concurrency`, `storage`,
+`index_ops`, `table_access`, `health`. Exit `0` = success, non-zero = failure (and a `failed` row is
+written to `collection_run`).
 
 Check what ran:
 
@@ -110,6 +111,7 @@ Keep cadence in the scheduler; `cadence_minutes` in `config.yaml` documents the 
 */15 * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task waits
 */30 * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task workload
 0    * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task query_perf
+*    * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task concurrency
 30   2 * * *  cd /opt/sql-observability && .venv/bin/python run.py --task storage
 35   2 * * *  cd /opt/sql-observability && .venv/bin/python run.py --task index_ops
 40   2 * * *  cd /opt/sql-observability && .venv/bin/python run.py --task table_access

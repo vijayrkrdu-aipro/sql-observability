@@ -541,9 +541,26 @@ with Automatic Page Refresh — no deployment needed.)*
   instruction, same as Phase 1). Next: Phase 3 (`feat/phase3`) — docs & CI.
 
 **Phase 3 — docs & CI** (branch `feat/phase3`)
-- 3.1 Verify/extend the provided `README.md`; add `.github/workflows/ci.yml` (ruff + pytest via
+- [x] 3.1 Verify/extend the provided `README.md`; add `.github/workflows/ci.yml` (ruff + pytest via
   `requirements-dev.txt`, no DB). ✅ CI green on push.
-- 3.2 Final pass: full `pytest` green, `ruff` clean, no DB references in tests. **Commit + push; merge.**
+  — DONE: README.md was missing the `concurrency` collector entirely (added in Task 2.2, after the
+  README was written) — added it to the "What it collects" table, the `--task` list, and a `* * * * *`
+  cron line. `.github/workflows/ci.yml` added: checkout, Python 3.11, `pip install -r
+  requirements-dev.txt` (no pyodbc), `ruff check .`, `pytest -q`, `python run.py --help` — runs on
+  push/PR to any branch. Not yet verified green on GitHub Actions since there's no remote configured
+  yet (Section 9 — human sets up the remote); will confirm once pushed.
+- [x] 3.2 Final pass: full `pytest` green, `ruff` clean, no DB references in tests. **Commit + push; merge.**
+  — DONE: confirmed `pyodbc` is imported exactly once in the whole `src/` tree, lazily inside
+  `db.connect()` (grepped); the only "pyodbc" mentions in `tests/` are a docstring/comment describing
+  the fakes and a positive assertion that `"pyodbc" not in sys.modules`. `run.py --help` exits 0 with
+  no ODBC driver installed. `ruff check .` clean, `pytest -q` green (83 passed, unchanged by the docs
+  changes above).
+
+  **Definition of done (Section 17) met:** all 10 collectors + `rpt.*` views + retention written to
+  spec, tests green against the mocked DB layer, ruff clean, `run.py --help` works driver-less, nothing
+  in the repo attempts a live connection, every phase committed with conventional messages. Live
+  validation remains the human's Phase-14 porting step. **Not done: push to remote / merge phases to
+  main** — holding throughout per instruction ("you can push it later"); repo has no remote configured.
 
 ## 16. What this platform measures and why (the metrics that matter)
 

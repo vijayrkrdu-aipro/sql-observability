@@ -9,31 +9,20 @@ import sys
 
 from src import db
 from src.collectors.base import Collector
+from src.collectors.concurrency import ConcurrencyCollector
 from src.collectors.cpu import CpuCollector
 from src.collectors.health import HealthCollector
 from src.collectors.index_ops import IndexOpsCollector
 from src.collectors.query_perf import QueryPerfCollector
+from src.collectors.sessions import SessionsCollector
 from src.collectors.storage import StorageCollector
 from src.collectors.table_access import TableAccessCollector
 from src.collectors.waits import WaitsCollector
+from src.collectors.workload import WorkloadCollector
 from src.config import env_var_prefix, load_config
 
-# Task registry is populated as collectors land (Phase 1.4 / Phase 2.1-2.2).
-# Keys must match config.yaml `tasks:`. TASK_NAMES documents the full future set for
-# --task's choices; TASK_REGISTRY only has entries for collectors that exist so far.
-TASK_NAMES = [
-    "cpu",
-    "waits",
-    "query_perf",
-    "workload",
-    "sessions",
-    "concurrency",
-    "storage",
-    "index_ops",
-    "table_access",
-    "health",
-]
-
+# Keys must match config.yaml `tasks:`. All ten collectors from the Phase 1/2 build plan
+# are implemented, so --task's choices are derived directly from this registry.
 TASK_REGISTRY: dict[str, type[Collector]] = {
     "cpu": CpuCollector,
     "waits": WaitsCollector,
@@ -42,6 +31,9 @@ TASK_REGISTRY: dict[str, type[Collector]] = {
     "index_ops": IndexOpsCollector,
     "table_access": TableAccessCollector,
     "health": HealthCollector,
+    "workload": WorkloadCollector,
+    "sessions": SessionsCollector,
+    "concurrency": ConcurrencyCollector,
 }
 
 
@@ -53,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--task",
         required=True,
-        choices=TASK_NAMES,
+        choices=sorted(TASK_REGISTRY),
         help="Collector task to run",
     )
     parser.add_argument(
@@ -78,11 +70,7 @@ def _connect(instance_config: dict, env_prefix: str):
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-
-    collector_cls = TASK_REGISTRY.get(args.task)
-    if collector_cls is None:
-        print(f"[run.py] collector '{args.task}' not yet implemented (see CLAUDE.md build plan)")
-        return 1
+    collector_cls = TASK_REGISTRY[args.task]
 
     config = load_config(args.config)
     exit_code = 0

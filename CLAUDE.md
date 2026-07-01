@@ -481,10 +481,32 @@ with Automatic Page Refresh — no deployment needed.)*
   a throwaway `SamplePerDbCollector`) plus one fixture-driven test file per real collector
   (`test_storage.py`, `test_index_ops.py`, `test_table_access.py`, `test_health.py`).
   `ruff check .` clean, `pytest -q` green (63 passed).
-- 2.2 `workload.py` (XE reader) + `sessions.py` (optional sampler) + `concurrency.py` (1-min
+- [x] 2.2 `workload.py` (XE reader) + `sessions.py` (optional sampler) + `concurrency.py` (1-min
   snapshot → `fact_concurrency`). ✅ XE-event parsing unit-tested against canned `.xel`-shaped XML
   fixtures (µs→ms, watermark filter, aggregation keys); concurrency transform tested; asserts no DDL.
   **Commit.**
+  — DONE: `workload.py` parses raw `event_data` XML from `sys.fn_xe_file_target_read_file` via
+  `xml.etree.ElementTree` (`parse_xe_event()`), never creates/alters the XE session. Watermark =
+  `MAX(started_at_utc)` from `dbo.collection_run` for this `source_instance`/task/`success` (read via
+  a `run()` override that fetches it from `repo_conn` before calling `super().run()`); events at/under
+  it are skipped. Aggregates by `(login_name, program_name, host_name, database_name)`; `upsert_sql()`
+  matches `fact_workload`'s computed `attribution_hash` column by recomputing the identical
+  `HASHBYTES('SHA2_256', CONCAT(...))` expression in the MERGE's `ON` clause (can't insert into a
+  computed column directly). `sessions.py` — zero-DDL fallback, aggregates `dm_exec_requests` by the
+  same 4-column key (no µs conversion needed, `cpu_time` is already ms there). `concurrency.py` reuses
+  `rt.concurrency_now`'s exact logic (aliased to `fact_concurrency`'s column names). `run.py`'s
+  `TASK_REGISTRY` now covers all 10 collectors from the build plan, so the old "not yet implemented"
+  placeholder branch and the separate `TASK_NAMES` list were dead code — removed; `--task` choices are
+  now derived directly from `TASK_REGISTRY`. `ruff check .` clean, `pytest -q` green (78 passed).
+
+  **Known issue flagged for the porting checklist (Section 14):** the provided
+  `sql/workload_attribution.sql` declares `fact_session_sample`'s key columns (`login_name`,
+  `program_name`, `host_name`, `database_name`) as nullable (`NULL`) but also includes them in its
+  `PRIMARY KEY` constraint — SQL Server rejects `PRIMARY KEY` on nullable columns at deploy time
+  ("Cannot define PRIMARY KEY constraint on nullable column"). Not fixed here since it's a provided
+  file outside this task's scope and doesn't block Python collector work (sessions.py's column names/
+  shapes are unaffected) — flagging so it's fixed before running `workload_attribution.sql` PART A at
+  port time.
 - 2.3 `sql/rpt_views.sql` incl. `rpt.workload_by_category` + `rpt.top_logins` (Section 12). ✅ optional
   sqlglot parse; manual review vs spec. **Commit.**
 - 2.4 `sql/retention.sql` (batched deletes per `retention_days`, incl. `fact_workload`/

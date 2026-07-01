@@ -1,0 +1,11 @@
+[
+  {
+    "event_data": "<event name='sql_batch_completed' package='sqlserver' timestamp='2026-07-01T00:00:00.000Z'><data name='cpu_time'><value>50000</value></data><data name='duration'><value>120000</value></data><data name='logical_reads'><value>200</value></data><data name='writes'><value>1</value></data><data name='row_count'><value>10</value></data><action name='server_principal_name'><value>DOMAIN\\svc_app</value></action><action name='client_app_name'><value>MyApp</value></action><action name='client_hostname'><value>APPHOST01</value></action><action name='database_name'><value>AppDb</value></action></event>"
+  },
+  {
+    "event_data": "<event name='sql_batch_completed' package='sqlserver' timestamp='2026-07-01T00:00:05.000Z'><data name='cpu_time'><value>30000</value></data><data name='duration'><value>80000</value></data><data name='logical_reads'><value>100</value></data><data name='writes'><value>0</value></data><data name='row_count'><value>5</value></data><action name='server_principal_name'><value>DOMAIN\\svc_app</value></action><action name='client_app_name'><value>MyApp</value></action><action name='client_hostname'><value>APPHOST01</value></action><action name='database_name'><value>AppDb</value></action></event>"
+  },
+  {
+    "event_data": "<event name='rpc_completed' package='sqlserver' timestamp='2026-06-30T23:59:00.000Z'><data name='cpu_time'><value>2000000</value></data><data name='duration'><value>5000000</value></data><data name='logical_reads'><value>500000</value></data><data name='writes'><value>1000</value></data><data name='row_count'><value>200000</value></data><action name='server_principal_name'><value>DOMAIN\\svc_etl</value></action><action name='client_app_name'><value>SSIS-Nightly</value></action><action name='client_hostname'><value>ETLHOST</value></action><action name='database_name'><value>Staging</value></action></event>"
+  }
+]

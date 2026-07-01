@@ -1,0 +1,5 @@
+[
+  {"login_name": "svc_app", "program_name": "MyApp", "host_name": "APPHOST01", "database_name": "AppDb", "cpu_time": 100, "logical_reads": 5000},
+  {"login_name": "svc_app", "program_name": "MyApp", "host_name": "APPHOST01", "database_name": "AppDb", "cpu_time": 250, "logical_reads": 8000},
+  {"login_name": "svc_etl", "program_name": "SSIS-Nightly", "host_name": "ETLHOST", "database_name": "Staging", "cpu_time": 4000, "logical_reads": 900000}
+]

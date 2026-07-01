@@ -47,16 +47,14 @@ def test_missing_task_exits_nonzero():
     assert result.returncode != 0
 
 
-def test_unregistered_task_exits_1_without_touching_config(monkeypatch, capsys):
-    def fail_if_called(_path):
-        raise AssertionError("load_config should not be called for an unimplemented task")
-
-    monkeypatch.setattr(run_module, "load_config", fail_if_called)
-
-    exit_code = run_module.main(["--task", "workload"])
-
-    assert exit_code == 1
-    assert "not yet implemented" in capsys.readouterr().out
+def test_unknown_task_rejected_by_argparse():
+    result = subprocess.run(
+        [sys.executable, "run.py", "--task", "not_a_real_task"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode != 0
+    assert "invalid choice" in result.stderr
 
 
 def test_registered_task_dispatches_collector_and_closes_connections(monkeypatch, capsys):

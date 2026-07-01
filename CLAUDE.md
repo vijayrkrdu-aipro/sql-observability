@@ -423,8 +423,19 @@ with Automatic Page Refresh — no deployment needed.)*
   as shared fixtures in Task 1.3). Fixed a real YAML bug in the provided `config.yaml` line 35
   (`table_access:{` missing a space before `{`, broke PyYAML flow-mapping parse). `ruff check .`
   clean, `pytest -q` green (26 passed).
-- 1.3 `base.Collector` + `conftest.py` fakes/fixtures. ✅ a sample collector runs `--dry-run` against
+- [x] 1.3 `base.Collector` + `conftest.py` fakes/fixtures. ✅ a sample collector runs `--dry-run` against
   the fake with zero writes. **Commit.**
+  — DONE: `src/collectors/base.py` (`Collector` ABC: `source_query()`/`transform()`/`columns()`/
+  `upsert_sql()` contract; `run(source_conn, repo_conn, dry_run)` handles collection_run logging via
+  `db.start_run`/`finish_run`, persists via `_persist()` looping `cursor.execute(upsert_sql, ...)` per
+  row in `columns()` order, catches persist errors and marks the run `failed` before re-raising).
+  `tests/conftest.py` — shared `FakeCursor`/`FakeConnection` (single cursor per connection; `rows`/
+  `columns` back `fetchall()`+`description`, `scalar` backs `fetchone()` for the `OUTPUT INSERTED.run_id`
+  pattern) + `load_fixture()` for future canned JSON DMV rowsets in `tests/fixtures/`. `test_db.py`
+  refactored to reuse these fakes instead of its own inline copies. `tests/test_base_collector.py` adds
+  a throwaway `SampleCollector` (not a real collector — those are Task 1.4) proving dry-run does zero
+  writes, a real run persists+commits+logs success, and a persist error marks the run failed.
+  `ruff check .` clean, `pytest -q` green (29 passed).
 - 1.4 `cpu`, `waits`, `query_perf` collectors (Section 11). ✅ transform unit tests pass (CPU math,
   µs→ms, query_hash aggregation); upsert SQL columns asserted. **Commit + push; merge to main.**
 

@@ -32,7 +32,7 @@ tasks:
   concurrency: { enabled: true, cadence_minutes: 1 }     # near-real-time concurrency timeline
   storage:     { enabled: true, cadence_minutes: 1440 }   # daily
   index_ops:   { enabled: true, cadence_minutes: 1440 }   # daily
-  table_access:{ enabled: true, cadence_minutes: 1440 }   # daily — run at a CONSISTENT time so deltas align
+  table_access: { enabled: true, cadence_minutes: 1440 }  # daily — run at a CONSISTENT time so deltas align
   health:      { enabled: true, cadence_minutes: 1440 }   # daily
 
 # Top-query capture. SQL Server 2019 without Query Store -> use the plan cache.

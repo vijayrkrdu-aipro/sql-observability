@@ -562,6 +562,22 @@ with Automatic Page Refresh — no deployment needed.)*
   validation remains the human's Phase-14 porting step. **Not done: push to remote / merge phases to
   main** — holding throughout per instruction ("you can push it later"); repo has no remote configured.
 
+**Phase 4 — deferred extension points from Section 16** (branch `feat/phase4`, not in the original
+build plan; added because both Section 16 deferred items are clean, well-scoped extensions and the
+user asked to keep going)
+- [x] 4.1 `io_latency.py` (`sys.dm_io_virtual_file_stats`) — "is storage the bottleneck." ✅ transform
+  tests pass; upsert SQL columns asserted.
+  — DONE: new `fact_io_latency` table added to `repo_schema.sql` (raw cumulative per database file,
+  same pattern as `fact_wait_stats`). Plain `Collector` (not `PerDatabaseCollector`) since
+  `sys.dm_io_virtual_file_stats(NULL, NULL)` is already server-wide in one call — no per-database `USE`
+  looping needed. New `rpt.io_latency_deltas` view (LAG-with-floor restart handling, same shape as
+  `rpt.wait_deltas`) converts cumulative counters to avg read/write latency-per-IO for the window.
+  Retention 30 days (`fact_io_latency` in both `config.yaml` and `retention.sql`), cadence 15 min.
+  `tests/test_io_latency.py` + fixture. `ruff check .` clean, `pytest -q` green (86 passed).
+- [ ] 4.2 `blocking.py` (point-in-time blocking-chain snapshot, zero-DDL) + `deadlocks.py` (reads the
+  built-in `system_health` XE session's ring_buffer target — zero deployment, unlike
+  `Observability_Workload`).
+
 ## 16. What this platform measures and why (the metrics that matter)
 
 Each metric exists to answer a specific management/operations question:

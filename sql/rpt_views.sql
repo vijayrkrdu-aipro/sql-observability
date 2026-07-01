@@ -289,5 +289,69 @@ FROM dbo.fact_workload
 GROUP BY source_instance, login_name;
 GO
 
+/* ---------------------------------------------------------------------------
+   rpt.io_latency_deltas — Phase 4. Cumulative -> per-window delta (restart-safe, same
+   LAG-with-floor pattern as rpt.wait_deltas), then avg latency per IO for that window.
+   Answers "is storage the bottleneck": sustained > ~20ms avg read latency on a data
+   file is a common rule-of-thumb red flag (not enforced here -- a dashboard threshold).
+   --------------------------------------------------------------------------- */
+CREATE OR ALTER VIEW rpt.io_latency_deltas AS
+SELECT
+    source_instance, snapshot_time_utc, database_name, logical_file_name, file_type,
+    reads_delta, read_stall_ms_delta,
+    CASE WHEN reads_delta > 0
+         THEN CAST(read_stall_ms_delta AS DECIMAL(18, 4)) / reads_delta
+         ELSE NULL
+    END AS avg_read_latency_ms,
+    writes_delta, write_stall_ms_delta,
+    CASE WHEN writes_delta > 0
+         THEN CAST(write_stall_ms_delta AS DECIMAL(18, 4)) / writes_delta
+         ELSE NULL
+    END AS avg_write_latency_ms,
+    size_on_disk_bytes
+FROM (
+    SELECT *,
+        CASE WHEN reads_cum >= p_reads THEN reads_cum - p_reads ELSE reads_cum END AS reads_delta,
+        CASE WHEN read_stall_ms_cum  >= p_read_stall
+             THEN read_stall_ms_cum  - p_read_stall  ELSE read_stall_ms_cum  END AS read_stall_ms_delta,
+        CASE WHEN writes_cum >= p_writes THEN writes_cum - p_writes ELSE writes_cum END AS writes_delta,
+        CASE WHEN write_stall_ms_cum >= p_write_stall
+             THEN write_stall_ms_cum - p_write_stall ELSE write_stall_ms_cum END AS write_stall_ms_delta
+    FROM (
+        SELECT *,
+            LAG(reads_cum)          OVER (PARTITION BY source_instance, database_name, logical_file_name
+                                           ORDER BY snapshot_time_utc) AS p_reads,
+            LAG(read_stall_ms_cum)  OVER (PARTITION BY source_instance, database_name, logical_file_name
+                                           ORDER BY snapshot_time_utc) AS p_read_stall,
+            LAG(writes_cum)         OVER (PARTITION BY source_instance, database_name, logical_file_name
+                                           ORDER BY snapshot_time_utc) AS p_writes,
+            LAG(write_stall_ms_cum) OVER (PARTITION BY source_instance, database_name, logical_file_name
+                                           ORDER BY snapshot_time_utc) AS p_write_stall
+        FROM dbo.fact_io_latency
+    ) w
+) z
+WHERE p_reads IS NOT NULL;
+GO
+
+/* ---------------------------------------------------------------------------
+   rpt.blocking_recent — recent point-in-time blocking snapshots (Phase 4).
+   --------------------------------------------------------------------------- */
+CREATE OR ALTER VIEW rpt.blocking_recent AS
+SELECT source_instance, sample_time_utc, session_id, blocking_session_id, wait_type,
+       wait_time_ms, wait_resource, login_name, program_name, database_name
+FROM dbo.fact_blocking_snapshot;
+GO
+
+/* ---------------------------------------------------------------------------
+   rpt.deadlock_summary — Phase 4. Deadlocks are rare and high-signal, so this is a
+   near-verbatim pass-through of fact_deadlock rather than an aggregate; the dashboard's
+   "trend" is just a COUNT(*) by day/week over this view in Power BI.
+   --------------------------------------------------------------------------- */
+CREATE OR ALTER VIEW rpt.deadlock_summary AS
+SELECT source_instance, event_time_utc, victim_session_id, victim_login, victim_program,
+       process_count, resource_summary
+FROM dbo.fact_deadlock;
+GO
+
 PRINT 'rpt.* reporting views deployed.';
 GO

@@ -186,5 +186,69 @@ CREATE TABLE dbo.fact_concurrency (
 );
 GO
 
+/* ---------------------------------------------------------------------------
+   fact_io_latency — per-database-file IO stats (Phase 4). RAW CUMULATIVE since restart,
+   like fact_wait_stats; per-window latency-per-IO deltas are computed in rpt.io_latency_deltas.
+   Answers "is storage the bottleneck" (Section 16 deferred extension point).
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('dbo.fact_io_latency') IS NULL
+CREATE TABLE dbo.fact_io_latency (
+    source_instance    SYSNAME     NOT NULL,
+    snapshot_time_utc  DATETIME2   NOT NULL,
+    database_name      SYSNAME     NOT NULL,
+    logical_file_name  SYSNAME     NOT NULL,
+    file_type          VARCHAR(20) NOT NULL,   -- ROWS | LOG (sys.master_files.type_desc)
+    reads_cum          BIGINT      NOT NULL,
+    bytes_read_cum     BIGINT      NOT NULL,
+    read_stall_ms_cum  BIGINT      NOT NULL,
+    writes_cum         BIGINT      NOT NULL,
+    bytes_written_cum  BIGINT      NOT NULL,
+    write_stall_ms_cum BIGINT      NOT NULL,
+    size_on_disk_bytes BIGINT      NOT NULL,
+    CONSTRAINT PK_fact_io_latency PRIMARY KEY
+        (source_instance, snapshot_time_utc, database_name, logical_file_name)
+);
+GO
+
+/* ---------------------------------------------------------------------------
+   fact_blocking_snapshot — point-in-time blocking chain snapshot (Phase 4, zero-DDL).
+   One row per blocked session per sample; short retention, same spirit as
+   fact_concurrency/fact_session_sample.
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('dbo.fact_blocking_snapshot') IS NULL
+CREATE TABLE dbo.fact_blocking_snapshot (
+    source_instance      SYSNAME       NOT NULL,
+    sample_time_utc      DATETIME2     NOT NULL,
+    session_id           INT           NOT NULL,
+    blocking_session_id  INT           NOT NULL,
+    wait_type            NVARCHAR(60)  NULL,
+    wait_time_ms         BIGINT        NOT NULL,
+    wait_resource        NVARCHAR(256) NULL,
+    login_name           SYSNAME       NULL,
+    program_name         NVARCHAR(256) NULL,
+    database_name        SYSNAME       NULL,
+    CONSTRAINT PK_fact_blocking_snapshot PRIMARY KEY (source_instance, sample_time_utc, session_id)
+);
+GO
+
+/* ---------------------------------------------------------------------------
+   fact_deadlock — one row per deadlock event, read from the built-in system_health
+   XE session's ring_buffer target (Phase 4, zero-DDL -- system_health always exists,
+   no DBA deployment needed, unlike Observability_Workload).
+   --------------------------------------------------------------------------- */
+IF OBJECT_ID('dbo.fact_deadlock') IS NULL
+CREATE TABLE dbo.fact_deadlock (
+    source_instance    SYSNAME       NOT NULL,
+    event_time_utc     DATETIME2     NOT NULL,
+    victim_session_id  INT           NULL,
+    victim_login       SYSNAME       NULL,
+    victim_program     NVARCHAR(256) NULL,
+    process_count      INT           NOT NULL,
+    resource_summary   NVARCHAR(MAX) NULL,
+    deadlock_graph_xml NVARCHAR(MAX) NULL,
+    CONSTRAINT PK_fact_deadlock PRIMARY KEY (source_instance, event_time_utc)
+);
+GO
+
 PRINT 'DBA_Observability schema deployed.';
 GO

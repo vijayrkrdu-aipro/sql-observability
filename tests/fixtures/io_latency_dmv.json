@@ -1,0 +1,26 @@
+[
+  {
+    "database_name": "AppDb",
+    "logical_file_name": "AppDb_Data",
+    "file_type": "ROWS",
+    "reads_cum": 5000000,
+    "bytes_read_cum": 40960000000,
+    "read_stall_ms_cum": 120000,
+    "writes_cum": 2000000,
+    "bytes_written_cum": 10240000000,
+    "write_stall_ms_cum": 60000,
+    "size_on_disk_bytes": 214748364800
+  },
+  {
+    "database_name": "AppDb",
+    "logical_file_name": "AppDb_Log",
+    "file_type": "LOG",
+    "reads_cum": 100,
+    "bytes_read_cum": 819200,
+    "read_stall_ms_cum": 5,
+    "writes_cum": 900000,
+    "bytes_written_cum": 5120000000,
+    "write_stall_ms_cum": 30000,
+    "size_on_disk_bytes": 10737418240
+  }
+]

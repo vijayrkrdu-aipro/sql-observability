@@ -34,6 +34,9 @@ tasks:
   index_ops:   { enabled: true, cadence_minutes: 1440 }   # daily
   table_access: { enabled: true, cadence_minutes: 1440 }  # daily — run at a CONSISTENT time so deltas align
   health:      { enabled: true, cadence_minutes: 1440 }   # daily
+  io_latency:  { enabled: true, cadence_minutes: 15 }     # Phase 4 — is storage the bottleneck
+  blocking:    { enabled: true, cadence_minutes: 1 }      # Phase 4 — zero-DDL blocking-chain snapshot
+  deadlocks:   { enabled: true, cadence_minutes: 15 }     # Phase 4 — reads the built-in system_health XE session
 
 # Top-query capture. SQL Server 2019 without Query Store -> use the plan cache.
 # If you later enable Query Store on the target databases, switch source to query_store
@@ -81,3 +84,6 @@ retention_days:
   fact_index_ops: 365
   fact_health: 365
   collection_run: 90
+  fact_io_latency: 30          # cumulative IO stats snapshots, same horizon as fact_wait_stats
+  fact_blocking_snapshot: 7    # near-real-time; short retention, same spirit as fact_concurrency
+  fact_deadlock: 180           # deadlocks are rare and high-signal; keep a long trend window

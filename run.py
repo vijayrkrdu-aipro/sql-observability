@@ -13,6 +13,7 @@ from src.collectors.concurrency import ConcurrencyCollector
 from src.collectors.cpu import CpuCollector
 from src.collectors.health import HealthCollector
 from src.collectors.index_ops import IndexOpsCollector
+from src.collectors.io_latency import IoLatencyCollector
 from src.collectors.query_perf import QueryPerfCollector
 from src.collectors.sessions import SessionsCollector
 from src.collectors.storage import StorageCollector
@@ -21,8 +22,7 @@ from src.collectors.waits import WaitsCollector
 from src.collectors.workload import WorkloadCollector
 from src.config import env_var_prefix, load_config
 
-# Keys must match config.yaml `tasks:`. All ten collectors from the Phase 1/2 build plan
-# are implemented, so --task's choices are derived directly from this registry.
+# Keys must match config.yaml `tasks:`. --task's choices are derived directly from this registry.
 TASK_REGISTRY: dict[str, type[Collector]] = {
     "cpu": CpuCollector,
     "waits": WaitsCollector,
@@ -34,6 +34,7 @@ TASK_REGISTRY: dict[str, type[Collector]] = {
     "workload": WorkloadCollector,
     "sessions": SessionsCollector,
     "concurrency": ConcurrencyCollector,
+    "io_latency": IoLatencyCollector,
 }
 
 

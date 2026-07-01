@@ -133,5 +133,38 @@ BEGIN
 END
 GO
 
+DECLARE @BatchSize INT = 5000;
+
+/* fact_io_latency — 30 days (Phase 4) */
+WHILE 1 = 1
+BEGIN
+    DELETE TOP (@BatchSize) FROM dbo.fact_io_latency
+    WHERE snapshot_time_utc < DATEADD(DAY, -30, SYSUTCDATETIME());
+    IF @@ROWCOUNT = 0 BREAK;
+END
+GO
+
+DECLARE @BatchSize INT = 5000;
+
+/* fact_blocking_snapshot — 7 days (Phase 4, near-real-time) */
+WHILE 1 = 1
+BEGIN
+    DELETE TOP (@BatchSize) FROM dbo.fact_blocking_snapshot
+    WHERE sample_time_utc < DATEADD(DAY, -7, SYSUTCDATETIME());
+    IF @@ROWCOUNT = 0 BREAK;
+END
+GO
+
+DECLARE @BatchSize INT = 5000;
+
+/* fact_deadlock — 180 days (Phase 4; rare + high-signal, keep a long trend window) */
+WHILE 1 = 1
+BEGIN
+    DELETE TOP (@BatchSize) FROM dbo.fact_deadlock
+    WHERE event_time_utc < DATEADD(DAY, -180, SYSUTCDATETIME());
+    IF @@ROWCOUNT = 0 BREAK;
+END
+GO
+
 PRINT 'Retention purge complete.';
 GO

@@ -1,0 +1,5 @@
+[
+  {"sample_time_utc": "2026-06-30T23:58:00", "sql_cpu_pct": 40, "idle_pct": 55},
+  {"sample_time_utc": "2026-06-30T23:59:00", "sql_cpu_pct": 90, "idle_pct": 5},
+  {"sample_time_utc": "2026-07-01T00:00:00", "sql_cpu_pct": 60, "idle_pct": 60}
+]

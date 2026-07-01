@@ -1,0 +1,6 @@
+[
+  {"wait_type": "PAGEIOLATCH_SH", "wait_time_ms": 15000, "waiting_tasks_count": 200},
+  {"wait_type": "CXPACKET", "wait_time_ms": 8000, "waiting_tasks_count": 50},
+  {"wait_type": "SLEEP_TASK", "wait_time_ms": 999999, "waiting_tasks_count": 999},
+  {"wait_type": "LAZYWRITER_SLEEP", "wait_time_ms": 999999, "waiting_tasks_count": 999}
+]

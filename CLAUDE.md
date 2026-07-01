@@ -436,8 +436,27 @@ with Automatic Page Refresh — no deployment needed.)*
   a throwaway `SampleCollector` (not a real collector — those are Task 1.4) proving dry-run does zero
   writes, a real run persists+commits+logs success, and a persist error marks the run failed.
   `ruff check .` clean, `pytest -q` green (29 passed).
-- 1.4 `cpu`, `waits`, `query_perf` collectors (Section 11). ✅ transform unit tests pass (CPU math,
+- [x] 1.4 `cpu`, `waits`, `query_perf` collectors (Section 11). ✅ transform unit tests pass (CPU math,
   µs→ms, query_hash aggregation); upsert SQL columns asserted. **Commit + push; merge to main.**
+  — DONE: `src/collectors/cpu.py` (ring-buffer query verbatim from spec; `other_cpu_pct = 100 - sql -
+  idle` clamped to >= 0), `src/collectors/waits.py` (raw cumulative + one `snapshot_time_utc` per run;
+  `wait_type_exclusions` filtered in Python from config), `src/collectors/query_perf.py` (plan-cache
+  query_hash aggregation; single SQL statement UNIONs a top-N-by-CPU pass with a top-N-by-logical-reads
+  pass, `top_n` from `config.yaml` embedded as a validated int; µs->ms division done in SQL; Python-side
+  dedup by `query_hash` as a defensive safety net; NULL `query_sql_text` handled for evicted plans).
+  Each collector has fixture-driven tests in `tests/test_{cpu,waits,query_perf}.py` (JSON fixtures in
+  `tests/fixtures/`) plus a `columns()`/`upsert_sql()` placeholder-count assertion so a future column
+  add can't silently desync the two. `run.py` now has a real `TASK_REGISTRY` dispatching these three
+  (env-var credential lookup, connect source+repo, run collector, always close connections even on
+  failure) — the remaining `TASK_NAMES` print "not yet implemented" until Phase 2. Manually verified
+  `python run.py --task cpu --dry-run` fails gracefully (`No module named 'pyodbc'`, exit 1, no
+  traceback) since this build machine has no ODBC driver — expected per Section 1.
+  `ruff check .` clean, `pytest -q` green (46 passed).
+  **Not yet done: push + merge to main** — holding per user instruction to push later; still on local
+  branch `feat/phase1` with no remote configured.
+
+  **End of Phase 1.** All four tasks (1.1-1.4) complete on `feat/phase1`. Next: Phase 2 (`feat/phase2`)
+  — 2.1 storage/index_ops/table_access/health collectors.
 
 **Phase 2 — daily collectors, attribution, views, retention** (branch `feat/phase2`)
 - 2.1 `storage`, `index_ops`, `table_access`, `health` collectors. ✅ transform tests pass (incl.

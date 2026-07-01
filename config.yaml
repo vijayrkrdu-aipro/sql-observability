@@ -1,0 +1,83 @@
+# ============================================================================
+# SQL Server Fleet Observability — configuration (NON-SECRET ONLY)
+# Credentials never live here. Prefer Windows Integrated auth (integrated_auth: true).
+# If SQL auth is unavoidable, set integrated_auth: false and supply credentials via
+# environment variables (see .env.example). cadence_minutes is REFERENCE for how you
+# schedule each task externally — the code does not enforce cadence (the scheduler does).
+# ============================================================================
+
+repository:
+  server: REPO-SQL-01                       # repository instance (NOT the monitored one)
+  database: DBA_Observability
+  driver: "ODBC Driver 18 for SQL Server"
+  encrypt: true
+  trust_server_certificate: false           # set true only with a self-signed cert
+  integrated_auth: true
+
+# Add more instances here later — going 1 -> N is config only, no code change.
+monitored_instances:
+  - name: PROD-SQL-01                        # must match @@SERVERNAME; used as source_instance
+    driver: "ODBC Driver 18 for SQL Server"
+    encrypt: true
+    trust_server_certificate: false
+    integrated_auth: true
+    databases: []                            # [] = all user databases; or list specific ones
+
+tasks:
+  cpu:         { enabled: true, cadence_minutes: 15 }
+  waits:       { enabled: true, cadence_minutes: 15 }
+  query_perf:  { enabled: true, cadence_minutes: 60 }    # top queries (plan cache on 2019; see below)
+  workload:    { enabled: true, cadence_minutes: 30 }    # XE-based login + workload-type attribution
+  sessions:    { enabled: false, cadence_minutes: 5 }    # optional DMV sampler (zero-DDL fallback)
+  concurrency: { enabled: true, cadence_minutes: 1 }     # near-real-time concurrency timeline
+  storage:     { enabled: true, cadence_minutes: 1440 }   # daily
+  index_ops:   { enabled: true, cadence_minutes: 1440 }   # daily
+  table_access:{ enabled: true, cadence_minutes: 1440 }   # daily — run at a CONSISTENT time so deltas align
+  health:      { enabled: true, cadence_minutes: 1440 }   # daily
+
+# Top-query capture. SQL Server 2019 without Query Store -> use the plan cache.
+# If you later enable Query Store on the target databases, switch source to query_store
+# for true time-bucketed history (same fact_query_perf shape either way).
+query_perf:
+  source: plan_cache        # plan_cache | query_store
+  top_n: 50                 # top N by CPU and top N by logical reads per snapshot
+
+# Login + workload-type attribution (Extended Events). The XE session is deployed once on the
+# monitored instance by a DBA (workload_attribution.sql PART B); the collector only READS the files.
+workload:
+  xe_file_glob: "Observability_Workload*.xel"   # path/glob the monitored instance writes to
+  min_duration_ms: 1000                          # ignore queries faster than this (matches XE filter)
+
+thresholds:
+  slow_query_ms: 5000                        # informational; for future slow-query work
+  backup_full_max_age_hours: 24              # older than this -> red in rpt.health_summary
+  backup_log_max_age_hours: 4
+
+# Benign/idle waits excluded from collection (keeps fact_wait_stats signal high).
+wait_type_exclusions:
+  - SLEEP_TASK
+  - LAZYWRITER_SLEEP
+  - WAITFOR
+  - BROKER_TASK_STOP
+  - BROKER_TO_FLUSH
+  - XE_TIMER_EVENT
+  - XE_DISPATCHER_WAIT
+  - REQUEST_FOR_DEADLOCK_SEARCH
+  - SQLTRACE_INCREMENTAL_FLUSH_SLEEP
+  - DIRTY_PAGE_POLL
+  - HADR_FILESTREAM_IOMGR_IOCOMPLETION
+  - CHECKPOINT_QUEUE
+  - FT_IFTS_SCHEDULER_IDLE_WAIT
+
+retention_days:
+  fact_cpu: 30
+  fact_wait_stats: 30
+  fact_query_perf: 120         # top-query snapshots; raised to support 3-4 month analysis
+  fact_workload: 120           # keep attribution history for access-pattern analysis
+  fact_session_sample: 14
+  fact_concurrency: 7          # near-real-time; short retention (1 row/min is high volume)
+  fact_table_storage: 365
+  fact_table_usage: 365        # long horizon for access-pattern / tuning analysis
+  fact_index_ops: 365
+  fact_health: 365
+  collection_run: 90

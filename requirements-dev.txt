@@ -1,0 +1,7 @@
+# Build/test machine only (offline). No pyodbc — the DB layer is import-isolated and mocked.
+# Install with:  pip install -r requirements-dev.txt
+pytest>=8.0
+ruff>=0.6
+sqlglot>=25.0
+PyYAML>=6.0
+python-dotenv>=1.0

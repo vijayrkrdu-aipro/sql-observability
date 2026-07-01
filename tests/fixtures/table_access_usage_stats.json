@@ -1,0 +1,13 @@
+[
+  {
+    "database_name": "AppDb",
+    "schema_name": "dbo",
+    "table_name": "Orders",
+    "seeks_cum": 500000,
+    "scans_cum": 1200,
+    "lookups_cum": 30000,
+    "updates_cum": 45000,
+    "last_user_read_utc": "2026-06-30T23:59:00",
+    "last_user_update_utc": "2026-06-30T23:58:00"
+  }
+]

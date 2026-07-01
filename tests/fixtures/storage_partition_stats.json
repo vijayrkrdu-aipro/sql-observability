@@ -1,0 +1,20 @@
+[
+  {
+    "database_name": "AppDb",
+    "schema_name": "dbo",
+    "table_name": "Orders",
+    "row_count": 1500000,
+    "data_kb": 204800,
+    "index_kb": 51200,
+    "unused_kb": 2048
+  },
+  {
+    "database_name": "AppDb",
+    "schema_name": "dbo",
+    "table_name": "Customers",
+    "row_count": 42000,
+    "data_kb": 8192,
+    "index_kb": 2048,
+    "unused_kb": 512
+  }
+]

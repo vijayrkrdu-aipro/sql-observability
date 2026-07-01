@@ -1,0 +1,20 @@
+[
+  {
+    "database_name": "AppDb",
+    "kind": "missing",
+    "object_name": "dbo.Orders",
+    "impact_score": 8500.5,
+    "reads": null,
+    "writes": null,
+    "detail": "EQUALITY: CustomerId INEQUALITY:  INCLUDED: OrderDate"
+  },
+  {
+    "database_name": "AppDb",
+    "kind": "unused",
+    "object_name": "dbo.Customers.IX_Customers_Old",
+    "impact_score": null,
+    "reads": 0,
+    "writes": 1500,
+    "detail": null
+  }
+]

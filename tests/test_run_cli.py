@@ -53,7 +53,7 @@ def test_unregistered_task_exits_1_without_touching_config(monkeypatch, capsys):
 
     monkeypatch.setattr(run_module, "load_config", fail_if_called)
 
-    exit_code = run_module.main(["--task", "storage"])
+    exit_code = run_module.main(["--task", "workload"])
 
     assert exit_code == 1
     assert "not yet implemented" in capsys.readouterr().out

@@ -10,7 +10,11 @@ import sys
 from src import db
 from src.collectors.base import Collector
 from src.collectors.cpu import CpuCollector
+from src.collectors.health import HealthCollector
+from src.collectors.index_ops import IndexOpsCollector
 from src.collectors.query_perf import QueryPerfCollector
+from src.collectors.storage import StorageCollector
+from src.collectors.table_access import TableAccessCollector
 from src.collectors.waits import WaitsCollector
 from src.config import env_var_prefix, load_config
 
@@ -34,6 +38,10 @@ TASK_REGISTRY: dict[str, type[Collector]] = {
     "cpu": CpuCollector,
     "waits": WaitsCollector,
     "query_perf": QueryPerfCollector,
+    "storage": StorageCollector,
+    "index_ops": IndexOpsCollector,
+    "table_access": TableAccessCollector,
+    "health": HealthCollector,
 }
 
 

@@ -1,0 +1,18 @@
+[
+  {
+    "database_name": "AppDb",
+    "recovery_model": "FULL",
+    "state_desc": "ONLINE",
+    "last_full_backup_utc": "2026-06-30T02:00:00",
+    "last_log_backup_utc": "2026-07-01T05:45:00",
+    "job_failures_24h": 0
+  },
+  {
+    "database_name": "Reporting",
+    "recovery_model": "SIMPLE",
+    "state_desc": "ONLINE",
+    "last_full_backup_utc": null,
+    "last_log_backup_utc": null,
+    "job_failures_24h": 2
+  }
+]

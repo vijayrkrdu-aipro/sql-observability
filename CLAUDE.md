@@ -459,8 +459,28 @@ with Automatic Page Refresh — no deployment needed.)*
   — 2.1 storage/index_ops/table_access/health collectors.
 
 **Phase 2 — daily collectors, attribution, views, retention** (branch `feat/phase2`)
-- 2.1 `storage`, `index_ops`, `table_access`, `health` collectors. ✅ transform tests pass (incl.
+- [x] 2.1 `storage`, `index_ops`, `table_access`, `health` collectors. ✅ transform tests pass (incl.
   table-grain rollup of usage stats). **Commit.**
+  — DONE: extended `src/collectors/base.py` with a `fetch_rows()` seam (default: run
+  `source_query()` once) plus a new `PerDatabaseCollector` subclass that resolves target
+  databases from `config.yaml monitored_instances[].databases` (or discovers all online
+  user databases via `sys.databases WHERE database_id > 4` when that list is empty), then
+  runs `USE [db]; <source_query()>` once per database, tagging each row with
+  `database_name` before `transform()`. `storage.py`/`index_ops.py`/`table_access.py`
+  subclass `PerDatabaseCollector` (their DMVs are current-database-scoped);
+  `health.py` stays a plain `Collector` since `sys.databases`+`msdb` are server-wide and
+  already return one row per DB. Specifics: storage computes `index_kb`/`unused_kb`
+  directly in SQL from `dm_db_partition_stats` page counts; index_ops UNION ALLs a
+  missing-index pull (`impact_score`+`detail`) with an unused-index pull
+  (`reads`/`writes`, candidate when zero reads + positive writes); table_access rolls all
+  indexes of a table to table grain via `GROUP BY schema,table` with a `CROSS APPLY VALUES`
+  trick for `MAX` across seek/scan/lookup timestamps; health reads `msdb.dbo.backupset` +
+  `sysjobhistory`/`sysjobs` (`agent_datetime` for the 24h window) via `OUTER APPLY`.
+  `run.py TASK_REGISTRY` now dispatches all seven implemented tasks. Tests:
+  `tests/test_per_database_collector.py` (generic looping/discovery/escaping behavior with
+  a throwaway `SamplePerDbCollector`) plus one fixture-driven test file per real collector
+  (`test_storage.py`, `test_index_ops.py`, `test_table_access.py`, `test_health.py`).
+  `ruff check .` clean, `pytest -q` green (63 passed).
 - 2.2 `workload.py` (XE reader) + `sessions.py` (optional sampler) + `concurrency.py` (1-min
   snapshot → `fact_concurrency`). ✅ XE-event parsing unit-tested against canned `.xel`-shaped XML
   fixtures (µs→ms, watermark filter, aggregation keys); concurrency transform tested; asserts no DDL.

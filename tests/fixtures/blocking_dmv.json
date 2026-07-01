@@ -1,0 +1,22 @@
+[
+  {
+    "session_id": 60,
+    "blocking_session_id": 52,
+    "wait_type": "LCK_M_X",
+    "wait_time_ms": 4500,
+    "wait_resource": "KEY: 5:72057594043170816 (a1b2c3d4e5f6)",
+    "login_name": "DOMAIN\\svc_etl",
+    "program_name": "SSIS-Nightly",
+    "database_name": "AppDb"
+  },
+  {
+    "session_id": 61,
+    "blocking_session_id": 52,
+    "wait_type": "LCK_M_S",
+    "wait_time_ms": 1200,
+    "wait_resource": "KEY: 5:72057594043170816 (a1b2c3d4e5f6)",
+    "login_name": "svc_app",
+    "program_name": "MyApp",
+    "database_name": "AppDb"
+  }
+]

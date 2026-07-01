@@ -9,8 +9,10 @@ import sys
 
 from src import db
 from src.collectors.base import Collector
+from src.collectors.blocking import BlockingCollector
 from src.collectors.concurrency import ConcurrencyCollector
 from src.collectors.cpu import CpuCollector
+from src.collectors.deadlocks import DeadlocksCollector
 from src.collectors.health import HealthCollector
 from src.collectors.index_ops import IndexOpsCollector
 from src.collectors.io_latency import IoLatencyCollector
@@ -35,6 +37,8 @@ TASK_REGISTRY: dict[str, type[Collector]] = {
     "sessions": SessionsCollector,
     "concurrency": ConcurrencyCollector,
     "io_latency": IoLatencyCollector,
+    "blocking": BlockingCollector,
+    "deadlocks": DeadlocksCollector,
 }
 
 

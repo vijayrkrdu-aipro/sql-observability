@@ -163,10 +163,13 @@ credentials — the human configures the remote and auth.
 
 ## 10. Repository schema
 
-Already provided in `sql/repo_schema.sql` (deploy happens at port time, not here). Tables:
+Originally provided in `sql/repo_schema.sql` (deploy happens at port time, not here). Tables:
 `collection_run`, `fact_cpu`, `fact_wait_stats`, `fact_query_perf`, `fact_table_storage`,
 `fact_index_ops`, `fact_table_usage`, `fact_health`, `fact_concurrency`, plus the `rpt` schema. Build
 all code against these exact columns.
+
+**Phase 4 additions** (added to this file by Claude Code, not part of the original provided schema):
+`fact_io_latency`, `fact_blocking_snapshot`, `fact_deadlock` — see Section 15 Phase 4 and Section 16.
 
 The **workload/login attribution** module adds `dim_workload_class`, `fact_workload`, and
 `fact_session_sample` (see `sql/workload_attribution.sql`). Its Extended Events session is deployed
@@ -574,9 +577,32 @@ user asked to keep going)
   `rpt.wait_deltas`) converts cumulative counters to avg read/write latency-per-IO for the window.
   Retention 30 days (`fact_io_latency` in both `config.yaml` and `retention.sql`), cadence 15 min.
   `tests/test_io_latency.py` + fixture. `ruff check .` clean, `pytest -q` green (86 passed).
-- [ ] 4.2 `blocking.py` (point-in-time blocking-chain snapshot, zero-DDL) + `deadlocks.py` (reads the
+- [x] 4.2 `blocking.py` (point-in-time blocking-chain snapshot, zero-DDL) + `deadlocks.py` (reads the
   built-in `system_health` XE session's ring_buffer target — zero deployment, unlike
   `Observability_Workload`).
+  — DONE: `fact_blocking_snapshot` (one row per blocked session per sample, PK includes `session_id`
+  so multiple sessions blocked by the same head-of-chain session all persist) and `fact_deadlock`
+  (PK `(source_instance, event_time_utc)`) added to `repo_schema.sql`. `blocking.py` is a plain
+  `Collector`: `sys.dm_exec_requests` joined to `sys.dm_exec_sessions` WHERE
+  `blocking_session_id <> 0`. `deadlocks.py` reads `sys.dm_xe_session_targets` /
+  `sys.dm_xe_sessions` for `system_health`'s `ring_buffer` target, casts `target_data` to XML text,
+  and `parse_deadlock_events()` walks it with `xml.etree.ElementTree` filtering to
+  `event[@name='xml_deadlock_report']` (the ring buffer also holds `wait_info`,
+  `sp_server_diagnostics`, etc. — everything else is ignored), matching `victim-list/victimProcess/@id`
+  against `process-list/process/@id` to pull the victim's `spid`/`loginname`/`clientapp`, and summarizing
+  `resource-list/*` children as `tag:objectname`. Watermark-based incremental read, same
+  `collection_run`-backed pattern as `workload.py` (`task = 'deadlocks'`). Noted caveat (mirrors
+  `query_perf.py`'s plan-cache caveat): `system_health`'s ring buffer is capped and rolls over on a busy
+  server, so this is best-effort, not a complete deadlock history. New `rpt.blocking_recent` and
+  `rpt.deadlock_summary` views (near pass-through; Power BI does the day/week trend `COUNT(*)`).
+  Both new tables' retention added to `config.yaml`/`retention.sql` (blocking 7d, deadlock 180d — rare
+  + high-signal, long window). `tests/test_blocking.py` + `tests/test_deadlocks.py` (a hand-built
+  ring-buffer XML fixture with a decoy `wait_info` event proves the filter works, plus a
+  watermark-skip test). `run.py TASK_REGISTRY` now has 13 collectors. `ruff check .` clean, `pytest -q`
+  green (97 passed).
+
+  **End of Phase 4.** Both Section 16 deferred extension points are now built. Not pushed/merged —
+  holding per instruction.
 
 ## 16. What this platform measures and why (the metrics that matter)
 
@@ -597,6 +623,9 @@ Each metric exists to answer a specific management/operations question:
 | **Live active requests / query perf** (`rt.active_requests`) | What is running right now, and what's costly? | Real-time query performance |
 | **Live blocking + waits** (`rt.blocking`, `rt.live_waits`) | Who's blocked right now, waiting on what? | Real-time concurrency |
 | **Concurrency timeline** (`fact_concurrency`) | How have active/blocked/runnable sessions trended over the last hours? | Real-time concurrency (trend) |
+| **IO file latency** (`fact_io_latency`) — *Phase 4* | Is storage the bottleneck? Which file, read or write? | Deferred extension point, now built |
+| **Blocking chains** (`fact_blocking_snapshot`) — *Phase 4* | Who's blocked, by whom, on what, right now? | Deferred extension point, now built |
+| **Deadlocks** (`fact_deadlock`) — *Phase 4* | How often are we deadlocking, and who's the victim? | Deferred extension point, now built |
 
 **History horizon for access-pattern analysis:** the 3–4 month "dig" runs on `fact_table_usage` +
 `fact_query_perf`. `fact_table_usage` accumulates cleanly (retain 365 days). Query history is the weak
@@ -618,15 +647,17 @@ a one-time XE session deployment (PART B) requiring `ALTER ANY EVENT SESSION`. T
 stays read-only. Generic `.Net SqlClient` traffic is mapped to "App (generic)" and flagged to refine
 by setting `Application Name=` in those connection strings.
 
-**Deliberately deferred (clean extension points, not built in Phase 1):**
-- *Blocking & deadlocks* — high value operationally, lower value for a management trend view.
-- *IO file latency* (`sys.dm_io_virtual_file_stats`) — the top candidate to add next for "is storage
-  the bottleneck."
+**Built in Phase 4 (previously deferred as of Phase 1):**
+- *Blocking & deadlocks* — `blocking.py` (point-in-time snapshot) + `deadlocks.py` (built-in
+  `system_health` XE session, zero-DDL, best-effort since its ring buffer rolls over).
+- *IO file latency* (`sys.dm_io_virtual_file_stats`) — `io_latency.py`, answers "is storage the
+  bottleneck."
 
 ## 17. Definition of done (offline)
 
 All collectors (`cpu`, `waits`, `query_perf`, `storage`, `index_ops`, `table_access`, `health`,
-`workload`; `sessions` optional) and the `rpt.*`/retention SQL are written to spec; `pytest` is green
-against the mocked DB layer; `ruff` is clean; `run.py --help` works with no driver present; nothing in
-the repo attempts a live connection; every phase is committed with conventional messages and pushed.
-Live validation is explicitly the human's Phase-14 porting step.
+`workload`, `io_latency`, `blocking`, `deadlocks`; `sessions` optional) and the `rpt.*`/retention SQL
+are written to spec; `pytest` is green against the mocked DB layer; `ruff` is clean; `run.py --help`
+works with no driver present; nothing in the repo attempts a live connection; every phase is committed
+with conventional messages. Live validation is explicitly the human's Phase-14 porting step.
+Push to remote is being held per instruction — everything above is true of the local branches.

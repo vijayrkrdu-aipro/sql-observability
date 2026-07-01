@@ -23,6 +23,9 @@ instance, and expose a stable `rpt.*` view layer that **Power BI** renders as a 
 | `index_ops` | Missing + unused index opportunities | index DMVs | daily |
 | `table_access` | Per-day table access counts + patterns | `dm_db_index_usage_stats` | daily |
 | `health` | Backups, recovery model, DB state, job failures | `msdb` / `sys.databases` | daily |
+| `io_latency` | Per-file IO stats — is storage the bottleneck | `dm_io_virtual_file_stats` | 15 min |
+| `blocking` | Point-in-time blocking chains (zero-DDL) | DMVs | 1 min |
+| `deadlocks` | Deadlock events (zero-DDL, built-in session) | `system_health` XE | 15 min |
 
 Power BI reads only the `rpt.*` views — never the raw tables — so internal schema changes never break
 the dashboard. Query Store is **not required**; if you later enable it, set `query_perf.source:
@@ -49,6 +52,9 @@ invokes them on a cadence.
   `msdb`; and write access to `DBA_Observability` on the **repository** instance.
 - **For the `workload` collector:** a one-time Extended Events session created by a DBA (needs
   `ALTER ANY EVENT SESSION`) — see `sql/workload_attribution.sql` PART B. The collector only *reads* it.
+- **`io_latency`, `blocking`, and `deadlocks` need zero extra deployment** — they read
+  `sys.dm_io_virtual_file_stats`, `sys.dm_exec_requests`, and the built-in `system_health` XE session
+  (which every SQL Server instance runs by default), all with just `VIEW SERVER STATE`.
 
 ---
 
@@ -88,8 +94,8 @@ python run.py --task cpu
 ```
 
 Tasks: `cpu`, `waits`, `query_perf`, `workload`, `sessions` (optional), `concurrency`, `storage`,
-`index_ops`, `table_access`, `health`. Exit `0` = success, non-zero = failure (and a `failed` row is
-written to `collection_run`).
+`index_ops`, `table_access`, `health`, `io_latency`, `blocking`, `deadlocks`. Exit `0` = success,
+non-zero = failure (and a `failed` row is written to `collection_run`).
 
 Check what ran:
 
@@ -112,6 +118,9 @@ Keep cadence in the scheduler; `cadence_minutes` in `config.yaml` documents the 
 */30 * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task workload
 0    * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task query_perf
 *    * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task concurrency
+*    * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task blocking
+*/15 * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task io_latency
+*/15 * * * *  cd /opt/sql-observability && .venv/bin/python run.py --task deadlocks
 30   2 * * *  cd /opt/sql-observability && .venv/bin/python run.py --task storage
 35   2 * * *  cd /opt/sql-observability && .venv/bin/python run.py --task index_ops
 40   2 * * *  cd /opt/sql-observability && .venv/bin/python run.py --task table_access
@@ -169,6 +178,7 @@ access history (`table_access`) accumulates cleanly regardless.
 | `cpu` returns few/no rows | Confirm `VIEW SERVER STATE`; the ring buffer holds ~256 min — poll at least that often |
 | `workload` empty | XE session not created/started, or `workload.xe_file_glob` doesn't match the .xel path |
 | `query_perf` sparse | Plan cache was recently cleared/restarted — expected; consider Query Store |
+| `deadlocks` misses some events | `system_health`'s ring_buffer target is capped and rolls over on a busy server — expected best-effort behavior, poll at least every 15 min |
 | Negative deltas | Should never happen — the delta views handle restarts; check the view's reset logic |
 | Duplicate rows | A collector isn't upserting on its natural key — re-check `persist()` |
 

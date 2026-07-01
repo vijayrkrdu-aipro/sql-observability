@@ -527,8 +527,18 @@ with Automatic Page Refresh — no deployment needed.)*
   `tests/test_sql_parse.py` added: sqlglot (`dialect="tsql"`) parses every GO-separated batch across
   all four `sql/*.sql` files — 0 failures. `sql/rpt_views.sql.TODO` removed. `ruff check .` clean,
   `pytest -q` green (82 passed).
-- 2.4 `sql/retention.sql` (batched deletes per `retention_days`, incl. `fact_workload`/
+- [x] 2.4 `sql/retention.sql` (batched deletes per `retention_days`, incl. `fact_workload`/
   `fact_session_sample`). ✅ parse/review. **Commit + push; merge.**
+  — DONE: one `DELETE TOP (@BatchSize) ... WHILE @@ROWCOUNT > 0` loop per fact table (+
+  `collection_run`), batch size 5000, retention windows matching `config.yaml`
+  `retention_days:` exactly (cpu/waits 30d, query_perf/workload 120d, session_sample 14d,
+  concurrency 7d, table_storage/table_usage/index_ops/health 365d, collection_run 90d).
+  `tests/test_sql_parse.py` now covers 5 `sql/*.sql` files, all passing. `sql/retention.sql.TODO`
+  removed. `ruff check .` clean, `pytest -q` green (83 passed).
+
+  **End of Phase 2.** All of 2.1-2.4 complete on `feat/phase2`. Every collector, every rpt.* view,
+  and retention are built and offline-tested. Not yet done: push + merge to main (holding per
+  instruction, same as Phase 1). Next: Phase 3 (`feat/phase3`) — docs & CI.
 
 **Phase 3 — docs & CI** (branch `feat/phase3`)
 - 3.1 Verify/extend the provided `README.md`; add `.github/workflows/ci.yml` (ruff + pytest via

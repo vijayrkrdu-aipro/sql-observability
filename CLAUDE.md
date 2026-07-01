@@ -507,8 +507,26 @@ with Automatic Page Refresh — no deployment needed.)*
   file outside this task's scope and doesn't block Python collector work (sessions.py's column names/
   shapes are unaffected) — flagging so it's fixed before running `workload_attribution.sql` PART A at
   port time.
-- 2.3 `sql/rpt_views.sql` incl. `rpt.workload_by_category` + `rpt.top_logins` (Section 12). ✅ optional
+- [x] 2.3 `sql/rpt_views.sql` incl. `rpt.workload_by_category` + `rpt.top_logins` (Section 12). ✅ optional
   sqlglot parse; manual review vs spec. **Commit.**
+  — DONE: all 12 views from Section 12 built (`cpu_timeline`, `cpu_hour_heatmap`, `wait_deltas` +
+  `wait_category`, `top_queries`, `table_storage_latest`, `table_growth` (vs. closest snapshot >= 30
+  days prior), `table_access_daily` (LAG-with-floor restart handling, extended with `lookups_day` per
+  the spec note), `table_access_trend` (rolling 90-day), `index_opportunities` (latest snapshot per
+  instance/db + `impact_rank` for missing-index rows), `tuning_candidates` (size x access x index
+  opportunities join), `health_summary` (RAG via `state_desc`/`job_failures_24h`/backup-age thresholds
+  mirroring `config.yaml`), `workload_by_category`, `top_logins`). Two deviations from the Section 12
+  text, both intentional and noted inline in the SQL:
+  1. `rpt.top_queries` reads `dbo.fact_query_perf` — Section 12 names `fact_query_store`, which
+     doesn't exist anywhere in `repo_schema.sql` or the `query_perf` collector; a spec typo.
+  2. `rpt.workload_by_category` uses `OUTER APPLY` instead of the sketched `CROSS APPLY`, so
+     `fact_workload` rows with a NULL `program_name` still surface (tagged `Unknown`) instead of
+     silently vanishing, since `NULL LIKE '%'` is never `TRUE`.
+  Also tightened `tuning_candidates`' size<->index-opportunities join from a bare `LIKE '...%'` (which
+  would false-match e.g. `dbo.Order` against table `Orders`) to an exact match or a `.`-bounded prefix.
+  `tests/test_sql_parse.py` added: sqlglot (`dialect="tsql"`) parses every GO-separated batch across
+  all four `sql/*.sql` files — 0 failures. `sql/rpt_views.sql.TODO` removed. `ruff check .` clean,
+  `pytest -q` green (82 passed).
 - 2.4 `sql/retention.sql` (batched deletes per `retention_days`, incl. `fact_workload`/
   `fact_session_sample`). ✅ parse/review. **Commit + push; merge.**
 
